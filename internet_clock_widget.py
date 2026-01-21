@@ -14,7 +14,11 @@ def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
             return json.load(f)
-    return {"color": "#00ff00"}
+    return {
+        "color": "#00ff00",
+        "x": 200,
+        "y": 50
+    }
 
 def save_config():
     with open(CONFIG_FILE, "w") as f:
@@ -35,8 +39,8 @@ def sync_time():
         )
         d = r.json()
         base_time = datetime.datetime(
-            year=d["year"], month=d["month"], day=d["day"],
-            hour=d["hour"], minute=d["minute"], second=d["seconds"]
+            d["year"], d["month"], d["day"],
+            d["hour"], d["minute"], d["seconds"]
         )
         base_timestamp = time.time()
     except:
@@ -69,10 +73,23 @@ def start_move(e):
     root.y = e.y
 
 def do_move(e):
-    root.geometry(f"+{root.winfo_pointerx()-root.x}+{root.winfo_pointery()-root.y}")
+    x = root.winfo_pointerx() - root.x
+    y = root.winfo_pointery() - root.y
+    root.geometry(f"+{x}+{y}")
+
+def end_move(e):
+    config["x"] = root.winfo_x()
+    config["y"] = root.winfo_y()
+    save_config()
 
 def show_menu(e):
     menu.tk_popup(e.x_root, e.y_root)
+
+def exit_app():
+    config["x"] = root.winfo_x()
+    config["y"] = root.winfo_y()
+    save_config()
+    root.destroy()
 
 # ===== UI =====
 root = tk.Tk()
@@ -80,13 +97,16 @@ root.overrideredirect(True)
 root.attributes("-topmost", True)
 root.attributes("-alpha", 0.92)
 root.configure(bg="#1e1e1e")
-root.geometry("220x60")
+
+root.geometry(f"220x60+{config['x']}+{config['y']}")
 
 frame = tk.Frame(root, bg="#1e1e1e")
 frame.pack(fill="both", expand=True)
 
-edit = tk.Label(frame, text="✏", fg="#ffaa00", bg="#1e1e1e",
-                font=("Segoe UI", 13), cursor="hand2")
+edit = tk.Label(
+    frame, text="✏", fg="#ffaa00", bg="#1e1e1e",
+    font=("Segoe UI", 13), cursor="hand2"
+)
 edit.pack(side="left", padx=6)
 edit.bind("<Button-1>", lambda e: choose_color())
 
@@ -99,22 +119,25 @@ time_label = tk.Label(
 )
 time_label.pack(side="left")
 
-close = tk.Label(frame, text="✖", fg="#ff5555", bg="#1e1e1e",
-                 font=("Segoe UI", 13), cursor="hand2")
+close = tk.Label(
+    frame, text="✖", fg="#ff5555", bg="#1e1e1e",
+    font=("Segoe UI", 13), cursor="hand2"
+)
 close.pack(side="right", padx=6)
-close.bind("<Button-1>", lambda e: root.destroy())
+close.bind("<Button-1>", lambda e: exit_app())
 
 # ===== MENU =====
 menu = Menu(root, tearoff=0)
 menu.add_command(label="🎨 Đổi màu", command=choose_color)
 menu.add_separator()
-menu.add_command(label="❌ Thoát", command=root.destroy)
+menu.add_command(label="❌ Thoát", command=exit_app)
 
 frame.bind("<Button-3>", show_menu)
 time_label.bind("<Button-3>", show_menu)
 
 frame.bind("<Button-1>", start_move)
 frame.bind("<B1-Motion>", do_move)
+frame.bind("<ButtonRelease-1>", end_move)
 
 # ===== START =====
 sync_time()
